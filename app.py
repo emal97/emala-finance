@@ -203,7 +203,7 @@ elif menu == "Analyse Fondamentale":
         c3.metric("Rendement Dividende", div_val)
         c4.metric("Capitalisation", mcap_val)
 
-        st.subheader("📋 Profil de l'entreprise")
+        st.subheader(" Profil de l'entreprise")
         if summary_txt:
             st.write(summary_txt)
         else:
@@ -293,7 +293,7 @@ elif menu == "Simulateur DCA (Pro)":
 # 5. COMPARATEUR MULTI-ACTIONS (PRO)
 # ==========================================
 elif menu == "Comparateur (Pro)":
-    st.title("⚔️ Comparateur de Performance Relative")
+    st.title(" Comparateur de Performance Relative")
     
     if not st.session_state.is_pro:
         st.warning(" Module réservé aux abonnés Emala Pro.")
