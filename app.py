@@ -12,7 +12,7 @@ import re
 # --- CONFIGURATION PAGE ---
 st.set_page_config(
     page_title="Emala Finance Pro",
-    page_icon="⚡",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -47,8 +47,8 @@ with st.sidebar:
     st.caption("Terminal d'Analyse Financière")
     
     if not st.session_state.is_pro:
-        st.info("🔒 Mode Standard")
-        st.markdown(f"[👉 **Débloquer la version Pro (9,99 €/mois)**]({STRIPE_PAYMENT_LINK})")
+        st.info(" Mode Standard")
+        st.markdown(f"[ **Débloquer la version Pro (9,99 €/mois)**]({STRIPE_PAYMENT_LINK})")
         st.divider()
         code_input = st.text_input("Code Secret Admin :", type="password")
         if code_input == ADMIN_CODE:
@@ -56,7 +56,7 @@ with st.sidebar:
             st.success("Accès Pro activé !")
             st.rerun()
     else:
-        st.success("👑 MEMBRE PRO ACTIVÉ")
+        st.success(" MEMBRE PRO ACTIVÉ")
 
     st.divider()
     menu = st.radio(
@@ -242,11 +242,11 @@ elif menu == "Actualités":
 # 4. SIMULATEUR DCA (PRO)
 # ==========================================
 elif menu == "Simulateur DCA (Pro)":
-    st.title("💰 Simulateur d'Investissement Progressif (DCA)")
+    st.title(" Simulateur d'Investissement Progressif (DCA)")
     
     if not st.session_state.is_pro:
-        st.warning("🔒 Module réservé aux abonnés Emala Pro.")
-        st.markdown(f"[👉 **Activer mon accès Pro (9,99 €/mois)**]({STRIPE_PAYMENT_LINK})")
+        st.warning(" Module réservé aux abonnés Emala Pro.")
+        st.markdown(f"[ **Activer mon accès Pro (9,99 €/mois)**]({STRIPE_PAYMENT_LINK})")
     else:
         c1, c2 = st.columns(2)
         raw_input = c1.text_input("Symbole (ex: NVDA, BTC-USD)", value="NVDA")
@@ -296,8 +296,8 @@ elif menu == "Comparateur (Pro)":
     st.title("⚔️ Comparateur de Performance Relative")
     
     if not st.session_state.is_pro:
-        st.warning("🔒 Module réservé aux abonnés Emala Pro.")
-        st.markdown(f"[👉 **Activer mon accès Pro**]({STRIPE_PAYMENT_LINK})")
+        st.warning(" Module réservé aux abonnés Emala Pro.")
+        st.markdown(f"[ **Activer mon accès Pro**]({STRIPE_PAYMENT_LINK})")
     else:
         tickers_input = st.text_input("Actifs à comparer (séparés par des virgules)", value="NVDA, AAPL, MSFT, TSLA")
         tickers = [clean_ticker(t) for t in tickers_input.split(",") if t.strip()]
