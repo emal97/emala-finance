@@ -116,7 +116,7 @@ if menu == "Analyse Technique":
         else:
             st.error("Aucune donnée trouvée pour ce ticker.")
 # ==========================================
-# 2. ANALYSE FONDAMENTALE (Correctif complet)
+# 2. ANALYSE FONDAMENTALE (Version finale complète)
 # ==========================================
 elif menu == "Analyse Fondamentale":
     st.title("📊 Analyse Fondamentale")
@@ -132,9 +132,9 @@ elif menu == "Analyse Fondamentale":
 
         ticker = user_input.upper()
         
-        # Mapping direct des noms courants et corrections de saisie
+        # Mapping direct des noms courants
         TICKER_MAP = {
-            "NVIDIA": "NVDA", "NVIDIAC": "NVDA", "APPLE": "AAPL", 
+            "NVIDIA": "NVDA", "APPLE": "AAPL", 
             "MICROSOFT": "MSFT", "TESLA": "TSLA", "GOOGLE": "GOOGL", "AMAZON": "AMZN"
         }
         if ticker in TICKER_MAP:
@@ -142,7 +142,7 @@ elif menu == "Analyse Fondamentale":
 
         stock = yf.Ticker(ticker)
         
-        # 1. Métriques financières via fast_info (incassable)
+        # 1. Prix & Capitalisation via fast_info
         price_val = "N/A"
         mcap_val = "N/A"
         per_val = "N/A"
@@ -161,17 +161,33 @@ elif menu == "Analyse Fondamentale":
         except Exception:
             pass
 
-        # PER et Dividende si disponibles
+        # 2. PER & Dividende via API Directe Yahoo QuoteSummary
         try:
-            info = stock.info if isinstance(stock.info, dict) else {}
-            if info.get('trailingPE'):
-                per_val = f"{round(info['trailingPE'], 2)}"
-            if info.get('dividendYield') is not None:
-                div_val = f"{round(info['dividendYield'] * 100, 2)}%"
+            url_qs = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{urllib.parse.quote(ticker)}?modules=summaryDetail,defaultKeyStatistics"
+            req = urllib.request.Request(url_qs, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+            res = urllib.request.urlopen(req, timeout=4)
+            qs_data = json.loads(res.read().decode('utf-8'))
+            
+            result = qs_data.get('quoteSummary', {}).get('result', [])
+            if result:
+                summary_detail = result[0].get('summaryDetail', {})
+                key_stats = result[0].get('defaultKeyStatistics', {})
+                
+                # PER
+                pe_raw = summary_detail.get('trailingPE', {}).get('raw') or key_stats.get('trailingPE', {}).get('raw')
+                if pe_raw:
+                    per_val = f"{round(pe_raw, 2)}"
+                
+                # Dividende
+                div_raw = summary_detail.get('dividendYield', {}).get('raw')
+                if div_raw is not None:
+                    div_val = f"{round(div_raw * 100, 2)}%"
+                else:
+                    div_val = "0,0%"
         except Exception:
             pass
 
-        # 2. Recherche Wikipédia ciblée sur l'entreprise
+        # 3. Description Wikipédia
         summary_txt = None
         wiki_search = "Nvidia" if ticker == "NVDA" else ticker
         try:
