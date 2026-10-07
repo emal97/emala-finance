@@ -116,11 +116,14 @@ if menu == "Analyse Technique":
         else:
             st.error("Aucune donnée trouvée pour ce ticker.")
 # ==========================================
-# 2. ANALYSE FONDAMENTALE (Auto-détection Ticker)
+# 2. ANALYSE FONDAMENTALE (Correctif complet)
 # ==========================================
 elif menu == "Analyse Fondamentale":
     st.title("📊 Analyse Fondamentale")
-    user_input = st.text_input("Entrez le symbole ou le nom (ex: NVDA, NVIDIA, Apple)", value="NVDA").strip()
+    raw_input = st.text_input("Entrez le symbole ou le nom (ex: NVDA, NVIDIA, Apple)", value="NVDA")
+    
+    import re
+    user_input = re.sub(r'[^a-zA-Z0-9 ]', '', raw_input).strip()
     
     if user_input:
         import urllib.request
@@ -129,83 +132,59 @@ elif menu == "Analyse Fondamentale":
 
         ticker = user_input.upper()
         
-        # 1. Conversion automatique Nom -> Ticker (ex: NVIDIA -> NVDA)
-        try:
-            search_url = f"https://query2.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(user_input)}&quotesCount=1"
-            req_search = urllib.request.Request(search_url, headers={'User-Agent': 'Mozilla/5.0'})
-            res_search = urllib.request.urlopen(req_search, timeout=3)
-            search_data = json.loads(res_search.read().decode('utf-8'))
-            quotes = search_data.get('quotes', [])
-            if quotes:
-                ticker = quotes[0].get('symbol', ticker)
-        except Exception:
-            pass
+        # Mapping direct des noms courants et corrections de saisie
+        TICKER_MAP = {
+            "NVIDIA": "NVDA", "NVIDIAC": "NVDA", "APPLE": "AAPL", 
+            "MICROSOFT": "MSFT", "TESLA": "TSLA", "GOOGLE": "GOOGL", "AMAZON": "AMZN"
+        }
+        if ticker in TICKER_MAP:
+            ticker = TICKER_MAP[ticker]
 
+        stock = yf.Ticker(ticker)
+        
+        # 1. Métriques financières via fast_info (incassable)
         price_val = "N/A"
+        mcap_val = "N/A"
         per_val = "N/A"
         div_val = "N/A"
-        mcap_val = "N/A"
-        company_name = ticker
-        summary_txt = None
-
-        # 2. Récupération des métriques financières
+        
         try:
-            url_quote = f"https://query1.finance.yahoo.com/v7/finance/quote?symbols={urllib.parse.quote(ticker)}"
-            req = urllib.request.Request(
-                url_quote, 
-                headers={'User-Agent': 'Mozilla/5.0'}
-            )
-            res = urllib.request.urlopen(req, timeout=5)
-            data = json.loads(res.read().decode('utf-8'))
+            fast = stock.fast_info
+            price = getattr(fast, 'last_price', None)
+            currency = getattr(fast, 'currency', 'USD')
+            if price:
+                price_val = f"{round(price, 2)} {currency}"
             
-            result = data.get('quoteResponse', {}).get('result', [])
-            if result:
-                q = result[0]
-                company_name = q.get('longName') or q.get('shortName') or ticker
-                
-                price = q.get('regularMarketPrice')
-                currency = q.get('currency', '$')
-                if price:
-                    price_val = f"{round(price, 2)} {currency}"
-                
-                pe = q.get('trailingPE') or q.get('forwardPE')
-                if pe:
-                    per_val = f"{round(pe, 2)}"
-                
-                mcap = q.get('marketCap')
-                if mcap:
-                    mcap_val = f"{round(mcap / 1e9, 2)} B {currency}"
-                
-                div = q.get('trailingAnnualDividendYield') or q.get('dividendYield')
-                if div is not None:
-                    div_val = f"{round(div * 100, 2)}%" if div > 0 else "0,0%"
+            mcap = getattr(fast, 'market_cap', None)
+            if mcap:
+                mcap_val = f"{round(mcap / 1e9, 2)} B {currency}"
         except Exception:
             pass
 
-        # Secours Prix via l'historique yfinance si nécessaire
-        if price_val == "N/A":
-            try:
-                stock = yf.Ticker(ticker)
-                hist = stock.history(period="5d")
-                if not hist.empty:
-                    price_val = f"{round(hist['Close'].iloc[-1], 2)} $"
-            except Exception:
-                pass
-
-        # 3. Description via Wikipédia
+        # PER et Dividende si disponibles
         try:
-            search_term = company_name.split()[0] if company_name != ticker else ticker
-            wiki_url = f"https://fr.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(search_term)}"
+            info = stock.info if isinstance(stock.info, dict) else {}
+            if info.get('trailingPE'):
+                per_val = f"{round(info['trailingPE'], 2)}"
+            if info.get('dividendYield') is not None:
+                div_val = f"{round(info['dividendYield'] * 100, 2)}%"
+        except Exception:
+            pass
+
+        # 2. Recherche Wikipédia ciblée sur l'entreprise
+        summary_txt = None
+        wiki_search = "Nvidia" if ticker == "NVDA" else ticker
+        try:
+            wiki_url = f"https://fr.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(wiki_search)}"
             req_wiki = urllib.request.Request(wiki_url, headers={'User-Agent': 'Mozilla/5.0'})
             res_wiki = urllib.request.urlopen(req_wiki, timeout=3)
             wiki_data = json.loads(res_wiki.read().decode('utf-8'))
-            if 'extract' in wiki_data:
+            if 'extract' in wiki_data and "fait référence à" not in wiki_data['extract']:
                 summary_txt = wiki_data['extract']
         except Exception:
             pass
 
-        # Affichage
-        st.caption(f"Symbole détecté : **{ticker}** ({company_name})")
+        st.caption(f"Ticker utilisé : **{ticker}**")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Prix Actuel", price_val)
         col2.metric("P/E Ratio (PER)", per_val)
@@ -216,7 +195,7 @@ elif menu == "Analyse Fondamentale":
         if summary_txt:
             st.write(summary_txt)
         else:
-            st.info("Description indisponible.")
+            st.info("Description indisponible pour ce symbole.")
 # ==========================================
 # 3. ACTUALITÉS (Via Google News RSS)
 # ==========================================
