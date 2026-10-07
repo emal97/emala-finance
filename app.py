@@ -134,23 +134,44 @@ elif menu == "Analyse Fondamentale":
 
         st.subheader("Apropos de l'entreprise")
         st.write(info.get('longBusinessSummary', 'Aucune description disponible.'))
-
 # ==========================================
-# 3. ACTUALITÉS
+# 3. ACTUALITÉS (Via Google News RSS)
 # ==========================================
 elif menu == "Actualités":
     st.title("📰 Actualités Financières")
-    ticker = st.text_input("Ticker pour les actualités", value="AAPL")
+    ticker = st.text_input("Ticker pour les actualités (ex: AAPL, TSLA, MC.PA)", value="AAPL")
     
     if ticker:
-        news = yf.Ticker(ticker).news
-        if news:
-            for item in news[:5]:
-                st.subheader(item.get('title'))
-                st.write(f"Source : {item.get('publisher')} | [Lire l'article]({item.get('link')})")
-                st.divider()
-        else:
-            st.info("Aucune actualité récente trouvée.")
+        import urllib.parse
+        import urllib.request
+        import xml.etree.ElementTree as ET
+
+        try:
+            # Recherche Google News ciblée finance
+            query = f"{ticker} bourse action finance"
+            url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}&hl=fr&gl=FR&ceid=FR:fr"
+            
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            xml_data = urllib.request.urlopen(req, timeout=5).read()
+            
+            root = ET.fromstring(xml_data)
+            items = root.findall('.//item')[:5]
+            
+            if items:
+                for item in items:
+                    title = item.find('title').text if item.find('title') is not None else "Titre indisponible"
+                    link = item.find('link').text if item.find('link') is not None else "#"
+                    pub_date = item.find('pubDate').text if item.find('pubDate') is not None else ""
+                    
+                    st.subheader(title)
+                    if pub_date:
+                        st.caption(f"📅 {pub_date[:16]}")
+                    st.markdown(f"[👉 **Lire l'article complet**]({link})")
+                    st.divider()
+            else:
+                st.info("Aucune actualité trouvée pour ce ticker.")
+        except Exception as e:
+            st.error("Impossible de charger les actualités pour le moment.")
 
 # ==========================================
 # 4. SIMULATEUR DCA (PRO)
