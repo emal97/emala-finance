@@ -43,7 +43,7 @@ if "is_pro" not in st.session_state:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title("⚡ EMALA PRO")
+    st.title(" EMALA PRO")
     st.caption("Terminal d'Analyse Financière")
     
     if not st.session_state.is_pro:
@@ -137,7 +137,7 @@ def fetch_fundamentals(ticker):
 # 1. ANALYSE TECHNIQUE (GRAPHIQUES PRO PLOTLY)
 # ==========================================
 if menu == "Analyse Technique":
-    st.title("📈 Analyse Technique Avancée")
+    st.title(" Analyse Technique Avancée")
     
     col_input, col_period = st.columns([3, 1])
     raw_input = col_input.text_input("Symbole (ex: NVDA, AAPL, BTC-USD)", value="NVDA")
@@ -189,7 +189,7 @@ if menu == "Analyse Technique":
 # 2. ANALYSE FONDAMENTALE
 # ==========================================
 elif menu == "Analyse Fondamentale":
-    st.title("📊 Analyse Fondamentale")
+    st.title(" Analyse Fondamentale")
     raw_input = st.text_input("Symbole ou Nom de l'entreprise", value="NVDA")
     ticker = clean_ticker(raw_input)
     
@@ -213,7 +213,7 @@ elif menu == "Analyse Fondamentale":
 # 3. ACTUALITÉS
 # ==========================================
 elif menu == "Actualités":
-    st.title("📰 Flux d'Actualités")
+    st.title(" Flux d'Actualités")
     raw_input = st.text_input("Sujet ou Ticker", value="NVDA")
     ticker = clean_ticker(raw_input)
     
@@ -231,7 +231,7 @@ elif menu == "Actualités":
                     l = item.find('link').text if item.find('link') is not None else "#"
                     d = item.find('pubDate').text if item.find('pubDate') is not None else ""
                     st.markdown(f"### [{t}]({l})")
-                    if d: st.caption(f"📅 Publié le : {d[:16]}")
+                    if d: st.caption(f" Publié le : {d[:16]}")
                     st.divider()
             else:
                 st.info("Aucune actualité trouvée.")
