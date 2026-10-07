@@ -115,7 +115,6 @@ if menu == "Analyse Technique":
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.error("Aucune donnée trouvée pour ce ticker.")
-
 # ==========================================
 # 2. ANALYSE FONDAMENTALE
 # ==========================================
