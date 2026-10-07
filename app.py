@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 # --- CONFIGURATION STRIPE & SESSION ---
-STRIPE_PAYMENT_LINK = "https://buy.stripe.com/test_3cI00cdv72bm3xh5gocs800"
+STRIPE_PAYMENT_LINK = "https://buy.stripe.com/test_3cI00cdV72bm3xh5gocs800"
 
 if "is_pro" not in st.session_state:
     st.session_state["is_pro"] = False
