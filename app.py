@@ -116,17 +116,30 @@ if menu == "Analyse Technique":
         else:
             st.error("Aucune donnée trouvée pour ce ticker.")
 # ==========================================
-# 2. ANALYSE FONDAMENTALE (API Directe + Wikipédia)
+# 2. ANALYSE FONDAMENTALE (Auto-détection Ticker)
 # ==========================================
 elif menu == "Analyse Fondamentale":
     st.title("📊 Analyse Fondamentale")
-    ticker_input = st.text_input("Entrez le symbole (ex: NVDA, AAPL, TSLA)", value="NVDA")
-    ticker = ticker_input.strip().upper()
+    user_input = st.text_input("Entrez le symbole ou le nom (ex: NVDA, NVIDIA, Apple)", value="NVDA").strip()
     
-    if ticker:
+    if user_input:
         import urllib.request
         import urllib.parse
         import json
+
+        ticker = user_input.upper()
+        
+        # 1. Conversion automatique Nom -> Ticker (ex: NVIDIA -> NVDA)
+        try:
+            search_url = f"https://query2.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(user_input)}&quotesCount=1"
+            req_search = urllib.request.Request(search_url, headers={'User-Agent': 'Mozilla/5.0'})
+            res_search = urllib.request.urlopen(req_search, timeout=3)
+            search_data = json.loads(res_search.read().decode('utf-8'))
+            quotes = search_data.get('quotes', [])
+            if quotes:
+                ticker = quotes[0].get('symbol', ticker)
+        except Exception:
+            pass
 
         price_val = "N/A"
         per_val = "N/A"
@@ -135,12 +148,12 @@ elif menu == "Analyse Fondamentale":
         company_name = ticker
         summary_txt = None
 
-        # 1. API Yahoo Finance Directe (incassable, pas de crumb requis)
+        # 2. Récupération des métriques financières
         try:
             url_quote = f"https://query1.finance.yahoo.com/v7/finance/quote?symbols={urllib.parse.quote(ticker)}"
             req = urllib.request.Request(
                 url_quote, 
-                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+                headers={'User-Agent': 'Mozilla/5.0'}
             )
             res = urllib.request.urlopen(req, timeout=5)
             data = json.loads(res.read().decode('utf-8'))
@@ -150,32 +163,26 @@ elif menu == "Analyse Fondamentale":
                 q = result[0]
                 company_name = q.get('longName') or q.get('shortName') or ticker
                 
-                # Prix
                 price = q.get('regularMarketPrice')
                 currency = q.get('currency', '$')
                 if price:
                     price_val = f"{round(price, 2)} {currency}"
                 
-                # PER
                 pe = q.get('trailingPE') or q.get('forwardPE')
                 if pe:
                     per_val = f"{round(pe, 2)}"
                 
-                # Capitalisation
                 mcap = q.get('marketCap')
                 if mcap:
                     mcap_val = f"{round(mcap / 1e9, 2)} B {currency}"
                 
-                # Dividende
                 div = q.get('trailingAnnualDividendYield') or q.get('dividendYield')
-                if div:
-                    div_val = f"{round(div * 100, 2)}%"
-                else:
-                    div_val = "0,0%"
+                if div is not None:
+                    div_val = f"{round(div * 100, 2)}%" if div > 0 else "0,0%"
         except Exception:
             pass
 
-        # Secours Prix via l'historique yfinance
+        # Secours Prix via l'historique yfinance si nécessaire
         if price_val == "N/A":
             try:
                 stock = yf.Ticker(ticker)
@@ -185,27 +192,20 @@ elif menu == "Analyse Fondamentale":
             except Exception:
                 pass
 
-        # 2. Description via l'API Wikipédia
+        # 3. Description via Wikipédia
         try:
             search_term = company_name.split()[0] if company_name != ticker else ticker
             wiki_url = f"https://fr.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(search_term)}"
             req_wiki = urllib.request.Request(wiki_url, headers={'User-Agent': 'Mozilla/5.0'})
-            res_wiki = urllib.request.urlopen(req_wiki, timeout=5)
+            res_wiki = urllib.request.urlopen(req_wiki, timeout=3)
             wiki_data = json.loads(res_wiki.read().decode('utf-8'))
             if 'extract' in wiki_data:
                 summary_txt = wiki_data['extract']
         except Exception:
-            try:
-                wiki_url_en = f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(search_term)}"
-                req_wiki_en = urllib.request.Request(wiki_url_en, headers={'User-Agent': 'Mozilla/5.0'})
-                res_wiki_en = urllib.request.urlopen(req_wiki_en, timeout=5)
-                wiki_data_en = json.loads(res_wiki_en.read().decode('utf-8'))
-                if 'extract' in wiki_data_en:
-                    summary_txt = wiki_data_en['extract']
-            except Exception:
-                pass
+            pass
 
-        # Affichage des métriques
+        # Affichage
+        st.caption(f"Symbole détecté : **{ticker}** ({company_name})")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Prix Actuel", price_val)
         col2.metric("P/E Ratio (PER)", per_val)
