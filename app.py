@@ -116,24 +116,89 @@ if menu == "Analyse Technique":
         else:
             st.error("Aucune donnée trouvée pour ce ticker.")
 # ==========================================
-# 2. ANALYSE FONDAMENTALE
+# 2. ANALYSE FONDAMENTALE (Anti-blocage)
 # ==========================================
 elif menu == "Analyse Fondamentale":
     st.title("📊 Analyse Fondamentale")
-    ticker = st.text_input("Entrez le symbole (ex: AAPL, MC.PA)", value="AAPL")
+    ticker = st.text_input("Entrez le symbole (ex: NVDA, AAPL, TSLA)", value="NVDA").strip().upper()
     
     if ticker:
-        stock = yf.Ticker(ticker)
-        info = stock.info
-        
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Prix Actuel", f"{info.get('currentPrice', 'N/A')} {info.get('currency', '')}")
-        col2.metric("P/E Ratio (PER)", info.get('trailingPE', 'N/A'))
-        col3.metric("Rendement Dividende", f"{round(info.get('dividendYield', 0) * 100, 2)}%" if info.get('dividendYield') else "N/A")
-        col4.metric("Capitalisation", f"{round(info.get('marketCap', 0) / 1e9, 2)} B")
+        import urllib.request
+        import re
 
-        st.subheader("Apropos de l'entreprise")
-        st.write(info.get('longBusinessSummary', 'Aucune description disponible.'))
+        stock = yf.Ticker(ticker)
+        
+        # 1. Prix en direct via l'historique (incassable)
+        price_val = "N/A"
+        try:
+            hist = stock.history(period="5d")
+            if not hist.empty:
+                price_val = f"{round(hist['Close'].iloc[-1], 2)} $"
+        except Exception:
+            pass
+
+        # 2. Récupération des fondamentaux
+        per_val = "N/A"
+        div_val = "N/A"
+        mcap_val = "N/A"
+        summary_txt = None
+
+        # Essai Yahoo Finance
+        try:
+            info = stock.info
+            if isinstance(info, dict) and info.get('trailingPE'):
+                if price_val == "N/A" and info.get('currentPrice'):
+                    price_val = f"{info.get('currentPrice')} $"
+                per_val = info.get('trailingPE', 'N/A')
+                if info.get('dividendYield'):
+                    div_val = f"{round(info.get('dividendYield') * 100, 2)}%"
+                if info.get('marketCap'):
+                    mcap_val = f"{round(info.get('marketCap') / 1e9, 2)} B $"
+                summary_txt = info.get('longBusinessSummary')
+        except Exception:
+            pass
+
+        # Secours via Finviz si Yahoo bloque sur le Cloud
+        if per_val == "N/A" or mcap_val == "N/A":
+            try:
+                url = f"https://finviz.com/quote.ashx?t={ticker}"
+                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                html = urllib.request.urlopen(req, timeout=5).read().decode('utf-8', errors='ignore')
+
+                # PER
+                per_match = re.search(r'P/E</td><td[^>]*><b>([^<]+)</b>', html)
+                if per_match and per_match.group(1) != '-':
+                    per_val = per_match.group(1)
+
+                # Capitalisation
+                mcap_match = re.search(r'Market Cap</td><td[^>]*><b>([^<]+)</b>', html)
+                if mcap_match and mcap_match.group(1) != '-':
+                    mcap_val = mcap_match.group(1)
+
+                # Dividende
+                div_match = re.search(r'Yield</td><td[^>]*><b>([^<]+)</b>', html)
+                if div_match and div_match.group(1) != '-':
+                    div_val = div_match.group(1)
+
+                # Description
+                desc_match = re.search(r'class="fullview-profile"[^>]*>([^<]+)</td>', html)
+                if desc_match and not summary_txt:
+                    summary_txt = desc_match.group(1).strip()
+            except Exception:
+                pass
+
+        # Affichage
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Prix Actuel", price_val)
+        col2.metric("P/E Ratio (PER)", per_val)
+        col3.metric("Rendement Dividende", div_val)
+        col4.metric("Capitalisation", mcap_val)
+
+        st.subheader("À propos de l'entreprise")
+        if summary_txt:
+            st.write(summary_txt)
+        else:
+            st.info("Description indisponible pour ce symbole.")
 # ==========================================
 # 3. ACTUALITÉS (Via Google News RSS)
 # ==========================================
