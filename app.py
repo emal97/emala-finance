@@ -26,11 +26,9 @@ st.markdown("""
     
     .stApp { background-color: #0D1117; color: #C9D1D9; }
     
-    /* Customisation des métriques natives Streamlit */
     div[data-testid="stMetricValue"] { font-size: 2rem; font-weight: 700; color: #58A6FF; }
     div[data-testid="stMetricDelta"] { font-size: 1.1rem; font-weight: 600; }
     
-    /* Customisation de la sidebar */
     [data-testid="stSidebar"] { background-color: #161B22; border-right: 1px solid #30363D; }
 </style>
 """, unsafe_allow_html=True)
@@ -44,7 +42,7 @@ if "is_pro" not in st.session_state:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title(" EMALA")
+    st.title(" EMALA PRO")
     st.caption("Terminal d'Analyse Financière")
     
     if not st.session_state.is_pro:
@@ -68,7 +66,7 @@ with st.sidebar:
             "Actualités", 
             "Simulateur DCA (Pro)", 
             "Comparateur (Pro)",
-            "Prédictions IA / Maths (Pro)"
+            "IA & Machine Learning (Pro)"
         ]
     )
 
@@ -83,7 +81,7 @@ def clean_ticker(user_input):
     clean = re.sub(r'[^a-zA-Z0-9\.\-]', '', str(user_input)).strip().upper()
     return TICKER_MAP.get(clean, clean)
 
-# --- APPELS RÉSEAU EN CACHE (ANTI-PLANTAGE) ---
+# --- APPELS RÉSEAU EN CACHE ---
 @st.cache_data(ttl=1800)
 def fetch_history(ticker, period="1y"):
     try:
@@ -142,10 +140,10 @@ def fetch_fundamentals(ticker):
     return price_val, per_val, div_val, mcap_val, summary_txt
 
 # ==========================================
-# 1. ANALYSE TECHNIQUE (GRAPHIQUES PRO PLOTLY)
+# 1. ANALYSE TECHNIQUE
 # ==========================================
 if menu == "Analyse Technique":
-    st.title("Analyse Technique Avancée")
+    st.title("📈 Analyse Technique Avancée")
     
     col_input, col_period = st.columns([3, 1])
     raw_input = col_input.text_input("Symbole (ex: NVDA, AAPL, BTC-USD)", value="NVDA")
@@ -189,8 +187,6 @@ if menu == "Analyse Technique":
                 xaxis_rangeslider_visible=False, height=650, margin=dict(l=10, r=10, t=30, b=10)
             )
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.error("Données graphiques indisponibles pour ce symbole.")
 
 # ==========================================
 # 2. ANALYSE FONDAMENTALE
@@ -213,8 +209,6 @@ elif menu == "Analyse Fondamentale":
         st.subheader(" Profil de l'entreprise")
         if summary_txt:
             st.write(summary_txt)
-        else:
-            st.warning("Aucune description disponible pour ce symbole.")
 
 # ==========================================
 # 3. ACTUALITÉS
@@ -231,26 +225,19 @@ elif menu == "Actualités":
             xml_data = urllib.request.urlopen(req, timeout=5).read()
             root = ET.fromstring(xml_data)
             items = root.findall('.//item')[:6]
-            
-            if items:
-                for item in items:
-                    t = item.find('title').text if item.find('title') is not None else ""
-                    l = item.find('link').text if item.find('link') is not None else "#"
-                    d = item.find('pubDate').text if item.find('pubDate') is not None else ""
-                    st.markdown(f"### [{t}]({l})")
-                    if d: st.caption(f" Publié le : {d[:16]}")
-                    st.divider()
-            else:
-                st.info("Aucune actualité trouvée.")
+            for item in items:
+                t = item.find('title').text if item.find('title') is not None else ""
+                l = item.find('link').text if item.find('link') is not None else "#"
+                st.markdown(f"### [{t}]({l})")
+                st.divider()
         except Exception:
-            st.error("Impossible de récupérer les flux d'actualités.")
+            st.error("Actualités indisponibles.")
 
 # ==========================================
 # 4. SIMULATEUR DCA (PRO)
 # ==========================================
 elif menu == "Simulateur DCA (Pro)":
     st.title(" Simulateur d'Investissement Progressif (DCA)")
-    
     if not st.session_state.is_pro:
         st.warning(" Module réservé aux abonnés Emala Pro.")
     else:
@@ -262,11 +249,8 @@ elif menu == "Simulateur DCA (Pro)":
         df = fetch_history(ticker, period="2y")
         if not df.empty and 'Close' in df.columns:
             df_monthly = df['Close'].resample('ME').last().dropna()
-            
-            total_investi = 0
-            parts_cumulees = 0
-            historique_port = []
-            historique_inv = []
+            total_investi, parts_cumulees = 0, 0
+            historique_port, historique_inv = [], []
             
             for price in df_monthly:
                 total_investi += montant_mensuel
@@ -286,19 +270,14 @@ elif menu == "Simulateur DCA (Pro)":
             fig_dca = go.Figure()
             fig_dca.add_trace(go.Scatter(x=df_monthly.index, y=historique_port, mode='lines+markers', name="Portefeuille", line=dict(color='#3FB950', width=3)))
             fig_dca.add_trace(go.Scatter(x=df_monthly.index, y=historique_inv, mode='lines', name="Total Investi", line=dict(color='#8B949E', dash='dash')))
-            
-            fig_dca.update_layout(
-                template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(22,27,34,0.8)",
-                height=450, margin=dict(l=10, r=10, t=30, b=10), legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
-            )
+            fig_dca.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(22,27,34,0.8)", height=450)
             st.plotly_chart(fig_dca, use_container_width=True)
 
 # ==========================================
-# 5. COMPARATEUR MULTI-ACTIONS (PRO)
+# 5. COMPARATEUR (PRO)
 # ==========================================
 elif menu == "Comparateur (Pro)":
     st.title(" Comparateur de Performance Relative")
-    
     if not st.session_state.is_pro:
         st.warning(" Module réservé aux abonnés Emala Pro.")
     else:
@@ -313,76 +292,68 @@ elif menu == "Comparateur (Pro)":
                     perf_base100 = (df['Close'] / df['Close'].iloc[0]) * 100
                     fig_comp.add_trace(go.Scatter(x=df.index, y=perf_base100, mode='lines', name=t))
 
-            fig_comp.update_layout(
-                title="Évolution comparée sur 1 an (Base 100)",
-                template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(22,27,34,0.8)",
-                height=500, yaxis_title="Performance (%)"
-            )
+            fig_comp.update_layout(title="Évolution comparée sur 1 an (Base 100)", template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(22,27,34,0.8)", height=500)
             st.plotly_chart(fig_comp, use_container_width=True)
 
 # ==========================================
-# 6. PRÉDICTIONS MATHÉMATIQUES (NOUVEAU)
+# 6. IA & MACHINE LEARNING (PRO)
 # ==========================================
-elif menu == "Prédictions IA / Maths (Pro)":
-    st.title(" Prédictions Statistiques (Monte Carlo)")
-    st.markdown("Algorithme probabiliste simulant 100 futurs possibles en se basant sur la volatilité historique.")
+elif menu == "IA & Machine Learning (Pro)":
+    st.title(" Intelligence Artificielle & Régression Linéaire")
+    st.markdown("Prédiction de tendance algorithmique basée sur l'optimisation par matrices et moindres carrés.")
     
     if not st.session_state.is_pro:
         st.warning(" Module réservé aux abonnés Emala Pro.")
         st.markdown(f"[ **Activer mon accès Pro**]({STRIPE_PAYMENT_LINK})")
     else:
-        c1, c2 = st.columns(2)
-        raw_input = c1.text_input("Symbole à analyser", value="NVDA")
-        jours = c2.slider("Nombre de jours à simuler", 10, 60, 30)
+        col_m1, col_m2 = st.columns(2)
+        raw_input = col_m1.text_input("Actif à analyser par IA", value="NVDA")
+        jours_futurs = col_m2.slider("Jours de projection dans le futur", 5, 30, 15)
         ticker = clean_ticker(raw_input)
 
-        df = fetch_history(ticker, period="1y")
+        df = fetch_history(ticker, period="6mo")
         if not df.empty and 'Close' in df.columns:
-            # Récupération des données pour les maths
-            prix = df['Close'].values
-            rendements = df['Close'].pct_change().dropna()
+            # Transformation des données pour l'apprentissage linéaire
+            y = df['Close'].values
+            x = np.arange(len(y))
             
-            # Variables statistiques
-            mu = rendements.mean()
-            sigma = rendements.std()
-            dernier_prix = prix[-1]
+            # Calcul mathématique des moindres carrés (Algèbre Linéaire : y = ax + b)
+            A = np.vstack([x, np.ones(len(x))]).T
+            pente, ordonne_origine = np.linalg.lstsq(A, y, rcond=None)[0]
             
-            # Création de la matrice de prédiction (100 scénarios x N jours)
-            simulations = 100
-            resultats = np.zeros((jours, simulations))
-            resultats[0] = dernier_prix
+            # Génération de la ligne de tendance apprise
+            tendance_actuelle = (pente * x) + ordonne_origine
             
-            # La boucle de prédiction (Calcul Tensoriel / Algèbre Linéaire basique)
-            for t in range(1, jours):
-                chocs = np.random.normal(mu, sigma, simulations)
-                resultats[t] = resultats[t-1] * (1 + chocs)
+            # Projection future (Machine Learning prédictif basique)
+            x_futur = np.arange(len(y), len(y) + jours_futurs)
+            tendance_future = (pente * x_futur) + ordonne_origine
             
-            # Affichage Graphique
-            fig_mc = go.Figure()
+            # Dates futures estimées
+            dernieres_dates = df.index
+            dates_futures = pd.date_range(start=dernieres_dates[-1], periods=jours_futurs + 1, freq='B')[1:]
+
+            # Affichage Graphique Pro
+            fig_ml = go.Figure()
             
-            # Afficher les 100 lignes transparentes
-            for i in range(simulations):
-                fig_mc.add_trace(go.Scatter(
-                    y=resultats[:, i], mode='lines', 
-                    line=dict(color='rgba(88, 166, 255, 0.05)'), 
-                    showlegend=False, hoverinfo='skip'
-                ))
+            # Historique réel
+            fig_ml.add_trace(go.Scatter(x=dernieres_dates, y=y, mode='lines', name="Prix Réel Historique", line=dict(color='#58A6FF', width=2)))
             
-            # Afficher la tendance moyenne en rouge
-            prix_moyens = resultats.mean(axis=1)
-            fig_mc.add_trace(go.Scatter(
-                y=prix_moyens, mode='lines', name="Trajectoire Moyenne", 
-                line=dict(color='#F85149', width=3)
-            ))
+            # Ligne de tendance apprise par l'IA
+            fig_ml.add_trace(go.Scatter(x=dernieres_dates, y=tendance_actuelle, mode='lines', name="Modèle d'Apprentissage (Tendance)", line=dict(color='#E3B341', dash='dash', width=2)))
             
-            fig_mc.update_layout(
-                title=f"100 Scénarios Probables pour {ticker} sur {jours} jours",
+            # Prédiction future
+            fig_ml.add_trace(go.Scatter(x=dates_futures, y=tendance_future, mode='lines', name="Prédiction IA (Futur)", line=dict(color='#3FB950', width=3)))
+
+            fig_ml.update_layout(
+                title=f"Modèle Prédictif Intelligent pour {ticker}",
                 template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(22,27,34,0.8)",
-                height=500, yaxis_title="Prix Estimé ($)",
-                xaxis_title="Jours de trading futurs"
+                height=550, yaxis_title="Prix ($)", legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
             )
-            st.plotly_chart(fig_mc, use_container_width=True)
+            st.plotly_chart(fig_ml, use_container_width=True)
             
-            st.info(" **Comment ça marche ?** L'algorithme calcule la moyenne de croissance quotidienne et l'écart-type (le risque) de l'entreprise sur la dernière année. Il injecte ensuite ces données dans une loi Normale (une notion statistique que tu verras bientôt au lycée) pour générer des mouvements de prix aléatoires mais mathématiquement cohérents avec l'histoire de l'action.")
+            # Affichage de la puissance du modèle
+            tendance_type = "Haussière " if pente > 0 else "Baissière "
+            st.success(f"**Diagnostic de l'IA :** Le modèle détecte une dynamique globale **{tendance_type}** avec une pente mathématique de **{round(pente, 4)} $ par jour**. Ce type de calcul matriciel est la première brique logicielle utilisée pour automatiser les investissements à grande échelle.")
         else:
-            st.error("Données insuffisantes pour la simulation.")
+            st.error("Impossible de charger les données pour l'IA.")
+            
