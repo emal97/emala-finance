@@ -220,7 +220,7 @@ elif menu == "Analyse Fondamentale":
 # 3. ACTUALITÉS
 # ==========================================
 elif menu == "Actualités":
-    st.title("📰 Flux d'Actualités")
+    st.title(" Flux d'Actualités")
     raw_input = st.text_input("Sujet ou Ticker", value="NVDA")
     ticker = clean_ticker(raw_input)
     
@@ -238,7 +238,7 @@ elif menu == "Actualités":
                     l = item.find('link').text if item.find('link') is not None else "#"
                     d = item.find('pubDate').text if item.find('pubDate') is not None else ""
                     st.markdown(f"### [{t}]({l})")
-                    if d: st.caption(f"📅 Publié le : {d[:16]}")
+                    if d: st.caption(f" Publié le : {d[:16]}")
                     st.divider()
             else:
                 st.info("Aucune actualité trouvée.")
@@ -297,7 +297,7 @@ elif menu == "Simulateur DCA (Pro)":
 # 5. COMPARATEUR MULTI-ACTIONS (PRO)
 # ==========================================
 elif menu == "Comparateur (Pro)":
-    st.title("⚔️ Comparateur de Performance Relative")
+    st.title(" Comparateur de Performance Relative")
     
     if not st.session_state.is_pro:
         st.warning(" Module réservé aux abonnés Emala Pro.")
@@ -324,7 +324,7 @@ elif menu == "Comparateur (Pro)":
 # 6. PRÉDICTIONS MATHÉMATIQUES (NOUVEAU)
 # ==========================================
 elif menu == "Prédictions IA / Maths (Pro)":
-    st.title("🔮 Prédictions Statistiques (Monte Carlo)")
+    st.title(" Prédictions Statistiques (Monte Carlo)")
     st.markdown("Algorithme probabiliste simulant 100 futurs possibles en se basant sur la volatilité historique.")
     
     if not st.session_state.is_pro:
