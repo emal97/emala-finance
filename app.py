@@ -42,7 +42,7 @@ if "is_pro" not in st.session_state:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title(" EMALA PRO")
+    st.title(" EMALA ")
     st.caption("Terminal d'Analyse Financière")
     
     if not st.session_state.is_pro:
