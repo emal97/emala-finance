@@ -143,7 +143,7 @@ def fetch_fundamentals(ticker):
 # 1. ANALYSE TECHNIQUE
 # ==========================================
 if menu == "Analyse Technique":
-    st.title("📈 Analyse Technique Avancée")
+    st.title("Analyse Technique Avancée")
     
     col_input, col_period = st.columns([3, 1])
     raw_input = col_input.text_input("Symbole (ex: NVDA, AAPL, BTC-USD)", value="NVDA")
