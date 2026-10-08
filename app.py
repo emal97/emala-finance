@@ -1,6 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import urllib.request
@@ -43,7 +44,7 @@ if "is_pro" not in st.session_state:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title(" EMALA PRO")
+    st.title(" EMALA")
     st.caption("Terminal d'Analyse Financière")
     
     if not st.session_state.is_pro:
@@ -61,7 +62,14 @@ with st.sidebar:
     st.divider()
     menu = st.radio(
         "MODULES",
-        ["Analyse Technique", "Analyse Fondamentale", "Actualités", "Simulateur DCA (Pro)", "Comparateur (Pro)"]
+        [
+            "Analyse Technique", 
+            "Analyse Fondamentale", 
+            "Actualités", 
+            "Simulateur DCA (Pro)", 
+            "Comparateur (Pro)",
+            "Prédictions IA / Maths (Pro)"
+        ]
     )
 
 # --- NETTOYAGE AUTOMATIQUE DU TICKER ---
@@ -137,7 +145,7 @@ def fetch_fundamentals(ticker):
 # 1. ANALYSE TECHNIQUE (GRAPHIQUES PRO PLOTLY)
 # ==========================================
 if menu == "Analyse Technique":
-    st.title(" Analyse Technique Avancée")
+    st.title("📈 Analyse Technique Avancée")
     
     col_input, col_period = st.columns([3, 1])
     raw_input = col_input.text_input("Symbole (ex: NVDA, AAPL, BTC-USD)", value="NVDA")
@@ -162,7 +170,6 @@ if menu == "Analyse Technique":
                 row_width=[0.25, 0.75]
             )
 
-            # Chandeliers Japonais
             if 'Open' in df.columns and 'High' in df.columns:
                 fig.add_trace(go.Candlestick(
                     x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name="Prix"
@@ -213,7 +220,7 @@ elif menu == "Analyse Fondamentale":
 # 3. ACTUALITÉS
 # ==========================================
 elif menu == "Actualités":
-    st.title(" Flux d'Actualités")
+    st.title("📰 Flux d'Actualités")
     raw_input = st.text_input("Sujet ou Ticker", value="NVDA")
     ticker = clean_ticker(raw_input)
     
@@ -231,7 +238,7 @@ elif menu == "Actualités":
                     l = item.find('link').text if item.find('link') is not None else "#"
                     d = item.find('pubDate').text if item.find('pubDate') is not None else ""
                     st.markdown(f"### [{t}]({l})")
-                    if d: st.caption(f" Publié le : {d[:16]}")
+                    if d: st.caption(f"📅 Publié le : {d[:16]}")
                     st.divider()
             else:
                 st.info("Aucune actualité trouvée.")
@@ -246,7 +253,6 @@ elif menu == "Simulateur DCA (Pro)":
     
     if not st.session_state.is_pro:
         st.warning(" Module réservé aux abonnés Emala Pro.")
-        st.markdown(f"[ **Activer mon accès Pro (9,99 €/mois)**]({STRIPE_PAYMENT_LINK})")
     else:
         c1, c2 = st.columns(2)
         raw_input = c1.text_input("Symbole (ex: NVDA, BTC-USD)", value="NVDA")
@@ -286,18 +292,15 @@ elif menu == "Simulateur DCA (Pro)":
                 height=450, margin=dict(l=10, r=10, t=30, b=10), legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
             )
             st.plotly_chart(fig_dca, use_container_width=True)
-        else:
-            st.error("Données historiques insuffisantes pour simuler le DCA.")
 
 # ==========================================
 # 5. COMPARATEUR MULTI-ACTIONS (PRO)
 # ==========================================
 elif menu == "Comparateur (Pro)":
-    st.title(" Comparateur de Performance Relative")
+    st.title("⚔️ Comparateur de Performance Relative")
     
     if not st.session_state.is_pro:
         st.warning(" Module réservé aux abonnés Emala Pro.")
-        st.markdown(f"[ **Activer mon accès Pro**]({STRIPE_PAYMENT_LINK})")
     else:
         tickers_input = st.text_input("Actifs à comparer (séparés par des virgules)", value="NVDA, AAPL, MSFT, TSLA")
         tickers = [clean_ticker(t) for t in tickers_input.split(",") if t.strip()]
@@ -316,3 +319,70 @@ elif menu == "Comparateur (Pro)":
                 height=500, yaxis_title="Performance (%)"
             )
             st.plotly_chart(fig_comp, use_container_width=True)
+
+# ==========================================
+# 6. PRÉDICTIONS MATHÉMATIQUES (NOUVEAU)
+# ==========================================
+elif menu == "Prédictions IA / Maths (Pro)":
+    st.title("🔮 Prédictions Statistiques (Monte Carlo)")
+    st.markdown("Algorithme probabiliste simulant 100 futurs possibles en se basant sur la volatilité historique.")
+    
+    if not st.session_state.is_pro:
+        st.warning(" Module réservé aux abonnés Emala Pro.")
+        st.markdown(f"[ **Activer mon accès Pro**]({STRIPE_PAYMENT_LINK})")
+    else:
+        c1, c2 = st.columns(2)
+        raw_input = c1.text_input("Symbole à analyser", value="NVDA")
+        jours = c2.slider("Nombre de jours à simuler", 10, 60, 30)
+        ticker = clean_ticker(raw_input)
+
+        df = fetch_history(ticker, period="1y")
+        if not df.empty and 'Close' in df.columns:
+            # Récupération des données pour les maths
+            prix = df['Close'].values
+            rendements = df['Close'].pct_change().dropna()
+            
+            # Variables statistiques
+            mu = rendements.mean()
+            sigma = rendements.std()
+            dernier_prix = prix[-1]
+            
+            # Création de la matrice de prédiction (100 scénarios x N jours)
+            simulations = 100
+            resultats = np.zeros((jours, simulations))
+            resultats[0] = dernier_prix
+            
+            # La boucle de prédiction (Calcul Tensoriel / Algèbre Linéaire basique)
+            for t in range(1, jours):
+                chocs = np.random.normal(mu, sigma, simulations)
+                resultats[t] = resultats[t-1] * (1 + chocs)
+            
+            # Affichage Graphique
+            fig_mc = go.Figure()
+            
+            # Afficher les 100 lignes transparentes
+            for i in range(simulations):
+                fig_mc.add_trace(go.Scatter(
+                    y=resultats[:, i], mode='lines', 
+                    line=dict(color='rgba(88, 166, 255, 0.05)'), 
+                    showlegend=False, hoverinfo='skip'
+                ))
+            
+            # Afficher la tendance moyenne en rouge
+            prix_moyens = resultats.mean(axis=1)
+            fig_mc.add_trace(go.Scatter(
+                y=prix_moyens, mode='lines', name="Trajectoire Moyenne", 
+                line=dict(color='#F85149', width=3)
+            ))
+            
+            fig_mc.update_layout(
+                title=f"100 Scénarios Probables pour {ticker} sur {jours} jours",
+                template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(22,27,34,0.8)",
+                height=500, yaxis_title="Prix Estimé ($)",
+                xaxis_title="Jours de trading futurs"
+            )
+            st.plotly_chart(fig_mc, use_container_width=True)
+            
+            st.info(" **Comment ça marche ?** L'algorithme calcule la moyenne de croissance quotidienne et l'écart-type (le risque) de l'entreprise sur la dernière année. Il injecte ensuite ces données dans une loi Normale (une notion statistique que tu verras bientôt au lycée) pour générer des mouvements de prix aléatoires mais mathématiquement cohérents avec l'histoire de l'action.")
+        else:
+            st.error("Données insuffisantes pour la simulation.")
